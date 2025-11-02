@@ -1,0 +1,10 @@
+# Dependencies
+/vendor/
+
+# Local db and runtime
+/var/
+
+# IDE and OS
+/.idea/
+/.vscode/
+.DS_Store
