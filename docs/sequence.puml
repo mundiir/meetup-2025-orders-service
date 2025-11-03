@@ -64,5 +64,7 @@ Handler --> Controller: OrderCreated
 deactivate Handler
 Controller --> Client: 201 Created
 
+footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]
+
 @enduml
 
