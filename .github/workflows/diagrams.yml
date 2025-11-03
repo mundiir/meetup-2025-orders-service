@@ -24,7 +24,7 @@ jobs:
       - name: Process diagrams
         uses: Timmy/plantuml-action@v1
         with:
-          args: '-tsvg docs/c4/*.puml'
+          args: '-tsvg docs/*.puml'
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
