@@ -18,6 +18,15 @@ activate Handler #lightgreen
 Handler -> Handler: OrderId::fromString(orderId)
 note right: Validate and convert\nstring ID to ValueObject
 
+alt Invalid OrderId (empty)
+  Handler --> Controller: throw InvalidArgumentException
+  note right #pink: Exception thrown\nfor invalid ID format
+  deactivate Handler
+  Controller --> Client: 400 Bad Request
+  deactivate Controller
+  return
+end
+
 Handler -> Repo: get(orderId)
 activate Repo #lightcyan
 Repo --> Handler: order?
