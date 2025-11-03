@@ -7,7 +7,7 @@ LAYOUT_TOP_DOWN()
 title Component - Orders Service
 
 Container_Boundary(orders_cmp, "Orders Service") {
-  Component(orders_api, "API", "HTTP/REST", $link="create-order-application-sequence.svg")
+  Component(orders_api, "API", "HTTP/REST")
   Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence.svg")
   Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="../../src/Infrastructure/Persistence")
   Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="../../src/Infrastructure/Http")
