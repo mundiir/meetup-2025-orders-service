@@ -7,14 +7,18 @@ namespace App\Interfaces\Http;
 use App\Application\Exception\OrderRejectedException;
 use App\Application\Exception\TransientPaymentException;
 use App\Application\Exception\UnsupportedCurrencyException;
+use App\Application\Exception\OrderNotFoundException;
 use App\Application\UseCase\CreateOrder\CreateOrderCommand;
 use App\Application\UseCase\CreateOrder\CreateOrderHandler;
+use App\Application\UseCase\GetOrder\GetOrderHandler;
+use App\Application\UseCase\GetOrder\GetOrderQuery;
 
 final class OrderController
 {
-    public function __construct(private readonly CreateOrderHandler $handler)
-    {
-    }
+    public function __construct(
+        private readonly CreateOrderHandler $createHandler,
+        private readonly GetOrderHandler $getHandler
+    ) {}
 
     public function create(): array
     {
@@ -38,7 +42,7 @@ final class OrderController
         }
 
         try {
-            $event = ($this->handler)(new CreateOrderCommand($amount, $currency, $promoCode));
+            $event = ($this->createHandler)(new CreateOrderCommand($amount, $currency, $promoCode));
         } catch (UnsupportedCurrencyException $e) {
             return [400, ['error' => $e->getMessage()]];
         } catch (OrderRejectedException $e) {
@@ -58,6 +62,27 @@ final class OrderController
             'chargedCurrency' => $event->chargedCurrency,
             'appliedDiscountPercent' => $event->appliedDiscountPercent,
             'transactionId' => $event->transactionId,
+        ]];
+    }
+
+    public function show(string $orderId): array
+    {
+        try {
+            $result = ($this->getHandler)(new GetOrderQuery($orderId));
+        } catch (OrderNotFoundException) {
+            return [404, ['error' => 'Order not found']];
+        } catch (\InvalidArgumentException $e) {
+            return [400, ['error' => $e->getMessage()]];
+        } catch (\Throwable $e) {
+            return [400, ['error' => $e->getMessage()]];
+        }
+
+        return [200, [
+            'orderId' => $result->orderId,
+            'amountCents' => $result->amountCents,
+            'currency' => $result->currency,
+            'status' => $result->status,
+            'createdAt' => $result->createdAt->format(DATE_ATOM),
         ]];
     }
 }

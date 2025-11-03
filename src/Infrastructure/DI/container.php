@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Application\Port\PaymentGateway;
 use App\Application\UseCase\CreateOrder\CreateOrderHandler;
+use App\Application\UseCase\GetOrder\GetOrderHandler;
 use App\Domain\Repository\OrderRepository;
 use App\Infrastructure\Http\GuzzlePaymentGateway;
 use App\Infrastructure\Persistence\PdoOrderRepository;
@@ -39,6 +40,9 @@ return new class {
                 $this->get(FxConverter::class),
                 $this->get(PromoService::class),
                 $this->get(RiskChecker::class)
+            ),
+            GetOrderHandler::class => new GetOrderHandler(
+                $this->get(OrderRepository::class)
             ),
             default => throw new \RuntimeException("Unknown service: {$id}"),
         };
