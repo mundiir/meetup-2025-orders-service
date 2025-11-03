@@ -1,0 +1,48 @@
+name: Generate UseCase Diagrams on PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/Application/UseCase/**'
+      - 'docs/**'
+      - 'scripts/generate-usecase-diagrams.php'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-diagrams:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+
+      - name: Generate UseCase Diagrams
+        run: php scripts/generate-usecase-diagrams.php
+
+      - name: Process diagrams with PlantUML
+        uses: Timmy/plantuml-action@v1
+        with:
+          args: '-tsvg docs/*.puml'
+
+      - name: Commit and Push Generated Diagrams
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/*.puml docs/*.svg
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Generate PlantUML diagrams for UseCases"
+            git push
+          fi
