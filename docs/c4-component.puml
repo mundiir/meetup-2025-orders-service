@@ -37,5 +37,5 @@ Rel(orders_promo, promo_sys, "HTTP")
 Rel(orders_fx, fx_sys, "HTTP")
 Rel(orders_risk, risk_sys, "HTTP")
 
-footer [[../../../meetup-2025-landscape/c4/c4-containers.svg Back to Container]]
+footer [[../../../meetup-2025-landscape/c4-containers.svg Back to Container]]
 @enduml
