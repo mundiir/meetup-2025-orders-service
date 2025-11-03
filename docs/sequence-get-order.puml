@@ -1,23 +1,45 @@
 @startuml
-' Get Order Use Case — Application Layer
+' GetOrder Use Case — Application Layer with activations
 
-actor Client
-participant "Controller" as Controller
-participant "GetOrderHandler" as Handler
-participant OrderRepository as orders
+skinparam sequenceMessageAlign center
+skinparam BoxPadding 10
 
-Client -> Controller: Request
-Controller -> Handler: __invoke(GetOrderCommand)
-activate Handler
+actor Client #lightblue
+participant "OrderController" as Controller #lightyellow
+participant "GetOrderHandler" as Handler #lightgreen
+participant OrderRepository as Repo #lightcyan
 
-Handler -> orders: call operation
-activate orders
-orders --> Handler: result
-deactivate orders
+Client -> Controller: GET /orders/{id}
+activate Controller #lightyellow
 
-Handler --> Controller: Response
+Controller -> Handler: __invoke(GetOrderQuery)
+activate Handler #lightgreen
+
+Handler -> Handler: OrderId::fromString(orderId)
+note right: Validate and convert\nstring ID to ValueObject
+
+Handler -> Repo: get(orderId)
+activate Repo #lightcyan
+Repo --> Handler: order?
+deactivate Repo
+
+alt Order not found
+  Handler --> Controller: throw OrderNotFoundException
+  note right #pink: Exception thrown\nwhen order\ndoes not exist
+  deactivate Handler
+  Controller --> Client: 404 Not Found
+  deactivate Controller
+  return
+end
+
+Handler -> Handler: Build GetOrderResult\nfrom Order entity
+note right: Extract order details:\n- id\n- amountCents\n- currency\n- status\n- createdAt
+
+Handler --> Controller: GetOrderResult
 deactivate Handler
-Controller --> Client: Result
+
+Controller --> Client: 200 OK\n(JSON response)
+deactivate Controller
 
 footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]
 
