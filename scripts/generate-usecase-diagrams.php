@@ -141,20 +141,49 @@ function updateC4Component(string $c4File, array $useCases): void
     }
     
     $content = file_get_contents($c4File);
+    $lines = explode("\n", $content);
+    $newLines = [];
+    $useCaseComponentsFound = [];
+    $insertAfterAPI = false;
+    $apiLineIndex = -1;
     
-    // For each UseCase, update the link in the c4-component diagram
-    foreach ($useCases as $useCase) {
-        $useCaseReadable = preg_replace('/([a-z])([A-Z])/', '$1 $2', $useCase);
-        $sequenceFile = 'sequence-' . strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $useCase)) . '.svg';
-        
-        // Update the line that contains the UseCase name
-        // Look for pattern: Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence.svg")
-        $pattern = '/Component\(orders_app,\s*"' . preg_quote($useCaseReadable, '/') . '\s+Use\s+Case",\s*"Application Service",\s*\$link="[^"]*"\)/';
-        $replacement = 'Component(orders_app, "' . $useCaseReadable . ' Use Case", "Application Service", $link="' . $sequenceFile . '")';
-        
-        $content = preg_replace($pattern, $replacement, $content);
+    // First pass: identify existing UseCase components and API component line
+    foreach ($lines as $i => $line) {
+        if (preg_match('/Component\(orders_api,/', $line)) {
+            $apiLineIndex = $i;
+        }
+        foreach ($useCases as $useCase) {
+            $useCaseReadable = preg_replace('/([a-z])([A-Z])/', '$1 $2', $useCase);
+            if (preg_match('/Component\([^,]+,\s*"' . preg_quote($useCaseReadable, '/') . '\s+Use\s+Case"/', $line)) {
+                $useCaseComponentsFound[$useCase] = true;
+                // Update the link
+                $sequenceFile = 'sequence-' . strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $useCase)) . '.svg';
+                $lines[$i] = preg_replace('/\$link="[^"]*"/', '$link="' . $sequenceFile . '"', $line);
+            }
+        }
     }
     
+    // Second pass: add missing UseCase components after API component
+    $componentIndex = 0;
+    foreach ($lines as $i => $line) {
+        $newLines[] = $line;
+        
+        // After the API component, add any missing UseCase components
+        if ($i === $apiLineIndex) {
+            foreach ($useCases as $useCase) {
+                if (!isset($useCaseComponentsFound[$useCase])) {
+                    $componentIndex++;
+                    $useCaseReadable = preg_replace('/([a-z])([A-Z])/', '$1 $2', $useCase);
+                    $sequenceFile = 'sequence-' . strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $useCase)) . '.svg';
+                    $componentId = 'orders_uc' . $componentIndex;
+                    $newLines[] = '  Component(' . $componentId . ', "' . $useCaseReadable . ' Use Case", "Application Service", $link="' . $sequenceFile . '")';
+                    echo "Added component: {$useCaseReadable} Use Case\n";
+                }
+            }
+        }
+    }
+    
+    $content = implode("\n", $newLines);
     file_put_contents($c4File, $content);
     echo "Updated: {$c4File}\n";
 }
