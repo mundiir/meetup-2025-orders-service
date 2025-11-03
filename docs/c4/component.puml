@@ -1,0 +1,41 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+title Component - Orders Service
+
+Container_Boundary(orders_cmp, "Orders Service") {
+  Component(orders_api, "API", "HTTP/REST", $link="create-order-application-sequence.svg")
+  Component(orders_app, "Create Order Use Case", "Application Service", $link="../../src/Application/UseCase/CreateOrder")
+  Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="../../src/Infrastructure/Persistence")
+  Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="../../src/Infrastructure/Http")
+  Component(orders_fx, "FxConverter (Adapter)", "Service", $link="../../src/Infrastructure/Service")
+  Component(orders_promo, "PromoService (Adapter)", "Service", $link="../../src/Infrastructure/Service")
+  Component(orders_risk, "RiskChecker (Adapter)", "Service", $link="../../src/Infrastructure/Service")
+}
+
+' External dependencies around the container (Containers)
+ContainerDb(orders_db, "Orders Database", "SQLite")
+Container_Ext(payment_sys, "Payment Provider", "External System")
+Container_Ext(promo_sys, "Promo Service", "External System")
+Container_Ext(fx_sys, "FX Service", "External System")
+Container_Ext(risk_sys, "Risk Engine", "External System")
+
+Rel(orders_api, orders_app, "Handle Create Order request")
+Rel(orders_app, orders_promo, "Calculate discount")
+Rel(orders_app, orders_fx, "Convert to charge currency")
+Rel(orders_app, orders_risk, "Risk evaluation")
+Rel(orders_app, orders_pay, "Process payment")
+Rel(orders_app, orders_repo, "Persist order")
+
+' Adapters talk to external containers
+Rel(orders_repo, orders_db, "Reads/Writes")
+Rel(orders_pay, payment_sys, "HTTPS")
+Rel(orders_promo, promo_sys, "HTTP")
+Rel(orders_fx, fx_sys, "HTTP")
+Rel(orders_risk, risk_sys, "HTTP")
+
+footer [[../../../meetup-2025-landscape/c4/c2-containers.svg Back to Container]] | [[../../../meetup-2025-landscape/c4/c4-code-orders.svg Code (C4)]]
+@enduml

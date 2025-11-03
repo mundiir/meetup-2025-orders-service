@@ -26,10 +26,17 @@ A tiny PHP microservice in Clean Architecture style with a single Use Case: Crea
   - Body JSON: `{ "amountCents": 1999, "currency": "USD" }`
   - Response 201 JSON: `{ "orderId": "...", "amountCents": 1999, "currency": "USD", "occurredAt": "..." }`
 
+## Payment integration
+- By default, a local stub PaymentGateway is used.
+- To use the Payment microservice, set `PAYMENT_BASE_URI` (e.g. `http://127.0.0.1:8082`).
+  - Example E2E: start Payment service, then run Orders smoke with env var
+    - Payment: `php -S 127.0.0.1:8082 -t ../meetup-2025-payment-service/public`
+    - Orders smoke: `PAYMENT_BASE_URI=http://127.0.0.1:8082 php scripts/smoke.php`
+
 ## CLI smoke
 - `php scripts/smoke.php`
 
 ## Notes
 - public/index.php includes a PSR-4 autoload fallback so the service works even without Composer.
-- The PaymentGateway adapter is a stub that simulates latency and always succeeds.
+- The PaymentGateway adapter can call the Payment microservice via HTTP when configured.
 - Persistence defaults to SQLite (var/orders.sqlite). If unavailable, it falls back to an in-memory repository.

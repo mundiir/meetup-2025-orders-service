@@ -1,0 +1,68 @@
+@startuml
+' CreateOrder Use Case — Application Layer with activations
+
+actor Client
+participant "OrderController" as Controller
+participant "CreateOrderHandler" as Handler
+participant PromoService as Promo
+participant FxConverter as Fx
+participant RiskChecker as Risk
+participant PaymentGateway as Payment
+participant OrderRepository as Repo
+
+Client -> Controller: POST /orders
+Controller -> Handler: __invoke(CreateOrderCommand)
+activate Handler
+
+Handler -> Handler: validate currency
+alt Unsupported currency
+  Handler --> Controller: throw UnsupportedCurrency
+  deactivate Handler
+  return
+end
+
+Handler -> Promo: getDiscountPercent(promoCode, currency)
+activate Promo
+Promo --> Handler: percent
+deactivate Promo
+
+Handler -> Fx: convert(discountedAmount, currency, "USD")
+activate Fx
+Fx --> Handler: chargedAmount
+deactivate Fx
+
+Handler -> Risk: isAllowed(order, chargedAmount, "USD")
+activate Risk
+Risk --> Handler: allowed?
+deactivate Risk
+
+alt Not allowed
+  Handler --> Controller: throw OrderRejected
+  deactivate Handler
+  return
+end
+
+alt chargedAmount == 0
+  Handler -> Handler: transactionId = "free_*"
+else
+  loop up to 3 attempts
+    Handler -> Payment: charge(chargedAmount, "USD")
+    activate Payment
+    Payment --> Handler: transactionId
+    deactivate Payment
+  else TransientPaymentException
+    Handler -> Handler: exponential backoff
+  end
+end
+
+Handler -> Repo: save(order)
+activate Repo
+Repo --> Handler: ok
+deactivate Repo
+
+Handler --> Controller: OrderCreated
+deactivate Handler
+Controller --> Client: 201 Created
+
+@enduml
+

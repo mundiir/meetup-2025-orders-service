@@ -1,0 +1,26 @@
+@startuml
+
+!include https://raw.githubusercontent.com/mundiir/meetup-2025-landscape/refs/heads/main/styles/style.puml
+
+top to bottom direction
+skinparam linetype ortho
+
+class Entity01 {
+   name: varchar(100)
+   description: text
+   e1_id: int
+}
+class Entity02 {
+   e1_id: int
+   other_details: text
+   e2_id: int
+}
+class Entity03 {
+   e1_id: int
+   other_details: text
+   e3_id: int
+}
+
+Entity02  -[#595959,plain]-^  Entity01 : "e1_id"
+Entity03  -[#595959,plain]-^  Entity01 : "e1_id"
+@enduml

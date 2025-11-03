@@ -29,7 +29,7 @@ return new class {
         return match ($id) {
             \PDO::class => $this->createPdo(),
             OrderRepository::class => $this->createOrderRepository(),
-            PaymentGateway::class => new GuzzlePaymentGateway(),
+            PaymentGateway::class => $this->createPaymentGateway(),
             FxConverter::class => new SimpleFxConverter(),
             PromoService::class => new SimplePromoService(),
             RiskChecker::class => new SimpleRiskChecker(),
@@ -42,6 +42,12 @@ return new class {
             ),
             default => throw new \RuntimeException("Unknown service: {$id}"),
         };
+    }
+
+    private function createPaymentGateway(): PaymentGateway
+    {
+        $baseUri = getenv('PAYMENT_BASE_URI') ?: null;
+        return new GuzzlePaymentGateway($baseUri);
     }
 
     private function createOrderRepository(): OrderRepository
