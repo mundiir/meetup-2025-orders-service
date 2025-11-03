@@ -1,0 +1,24 @@
+@startuml
+' Get Order Use Case — Application Layer
+
+actor Client
+participant "Controller" as Controller
+participant "GetOrderHandler" as Handler
+participant OrderRepository as orders
+
+Client -> Controller: Request
+Controller -> Handler: __invoke(GetOrderCommand)
+activate Handler
+
+Handler -> orders: call operation
+activate orders
+orders --> Handler: result
+deactivate orders
+
+Handler --> Controller: Response
+deactivate Handler
+Controller --> Client: Result
+
+footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]
+
+@enduml
