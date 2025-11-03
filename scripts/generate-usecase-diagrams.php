@@ -146,11 +146,16 @@ function updateC4Component(string $c4File, array $useCases): void
     $useCaseComponentsFound = [];
     $insertAfterAPI = false;
     $apiLineIndex = -1;
+    $maxComponentIndex = 0;
     
     // First pass: identify existing UseCase components and API component line
     foreach ($lines as $i => $line) {
         if (preg_match('/Component\(orders_api,/', $line)) {
             $apiLineIndex = $i;
+        }
+        // Track highest component index
+        if (preg_match('/Component\(orders_uc(\d+),/', $line, $matches)) {
+            $maxComponentIndex = max($maxComponentIndex, (int)$matches[1]);
         }
         foreach ($useCases as $useCase) {
             $useCaseReadable = preg_replace('/([a-z])([A-Z])/', '$1 $2', $useCase);
@@ -164,7 +169,7 @@ function updateC4Component(string $c4File, array $useCases): void
     }
     
     // Second pass: add missing UseCase components after API component
-    $componentIndex = 0;
+    $componentIndex = $maxComponentIndex;
     foreach ($lines as $i => $line) {
         $newLines[] = $line;
         
