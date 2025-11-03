@@ -8,7 +8,7 @@ title Component - Orders Service
 
 Container_Boundary(orders_cmp, "Orders Service") {
   Component(orders_api, "API", "HTTP/REST", $link="create-order-application-sequence.svg")
-  Component(orders_app, "Create Order Use Case", "Application Service", $link="../../src/Application/UseCase/CreateOrder")
+  Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence.svg")
   Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="../../src/Infrastructure/Persistence")
   Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="../../src/Infrastructure/Http")
   Component(orders_fx, "FxConverter (Adapter)", "Service", $link="../../src/Infrastructure/Service")
@@ -17,7 +17,7 @@ Container_Boundary(orders_cmp, "Orders Service") {
 }
 
 ' External dependencies around the container (Containers)
-ContainerDb(orders_db, "Orders Database", "SQLite")
+ContainerDb(orders_db, "Orders Database", "SQLite", $link="er.svg")
 Container_Ext(payment_sys, "Payment Provider", "External System")
 Container_Ext(promo_sys, "Promo Service", "External System")
 Container_Ext(fx_sys, "FX Service", "External System")
@@ -37,5 +37,5 @@ Rel(orders_promo, promo_sys, "HTTP")
 Rel(orders_fx, fx_sys, "HTTP")
 Rel(orders_risk, risk_sys, "HTTP")
 
-footer [[../../../meetup-2025-landscape/c4/c2-containers.svg Back to Container]] | [[../../../meetup-2025-landscape/c4/c4-code-orders.svg Code (C4)]]
+footer [[../../../meetup-2025-landscape/c4/c4-containers.svg Back to Container]]
 @enduml
