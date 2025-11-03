@@ -8,7 +8,7 @@ title Component - Orders Service
 
 Container_Boundary(orders_cmp, "Orders Service") {
   Component(orders_api, "API", "HTTP/REST")
-  Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence.svg")
+  Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence-create-order.svg")
   Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Persistence")
   Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Http")
   Component(orders_fx, "FxConverter (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
