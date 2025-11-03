@@ -19,25 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Install PlantUML and Graphviz
+      - name: Rewrite footer links to absolute GitHub Pages
+        env:
+          OWNER: ${{ github.repository_owner }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y plantuml graphviz
+          sed -i "s#../../../meetup-2025-landscape/c4/c2-containers.svg#https://$OWNER.github.io/meetup-2025-landscape/c4-containers.svg#g" docs/c4/component.puml
+          sed -i "s#../../../meetup-2025-landscape/c4/c4-code-orders.svg#https://$OWNER.github.io/meetup-2025-landscape/c4-code-orders.svg#g" docs/c4/component.puml
+          # Rewrite relative src links to GitHub repo
+          sed -i "s#\../\../src/#https://github.com/$OWNER/meetup-2025-orders-service/tree/$BRANCH/src/#g" docs/c4/component.puml
 
-#      - name: Rewrite footer links to absolute GitHub Pages
-#        env:
-#          OWNER: ${{ github.repository_owner }}
-#          BRANCH: ${{ github.ref_name }}
-#        run: |
-#          sed -i "s#../../../meetup-2025-landscape/c4/c2-containers.svg#https://$OWNER.github.io/meetup-2025-landscape/c4-containers.svg#g" docs/c4/component.puml
-#          sed -i "s#../../../meetup-2025-landscape/c4/c4-code-orders.svg#https://$OWNER.github.io/meetup-2025-landscape/c4-code-orders.svg#g" docs/c4/component.puml
-#          # Rewrite relative src links to GitHub repo
-#          sed -i "s#\../\../src/#https://github.com/$OWNER/meetup-2025-orders-service/tree/$BRANCH/src/#g" docs/c4/component.puml
-
-      - name: Render PlantUML to SVG
-        run: plantuml -tsvg docs/c4/*.puml
+      - name: Process diagrams
+        uses: Timmy/plantuml-action@v1
+        with:
+          args: '-tsvg docs/c4/*.puml'
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
