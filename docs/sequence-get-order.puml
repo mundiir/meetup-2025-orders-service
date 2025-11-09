@@ -1,0 +1,50 @@
+@startuml
+' Get Order — Sequence with domain exception mapping
+autonumber
+
+actor Client #AEE3FF
+
+box "Orders Service" #DDDDDD
+  participant OrderController #C7F9CC
+  participant GetOrderHandler #FFF3B0
+  participant OrderRepository #FFD6A5
+end box
+
+participant "Data Store" as DataStore #FFD6A5
+
+Client -> OrderController: GET /orders/{id} (Retrieve Order)
+OrderController -> GetOrderHandler: Execute
+activate GetOrderHandler
+
+GetOrderHandler -> OrderRepository: findById(id)
+activate OrderRepository
+OrderRepository -> DataStore: read
+DataStore --> OrderRepository: Order | null
+OrderRepository --> GetOrderHandler: Order | null
+deactivate OrderRepository
+
+alt OrderNotFoundException
+  GetOrderHandler --> OrderController: OrderNotFoundException
+  OrderController --> Client: 404 Not Found
+  deactivate GetOrderHandler
+  return
+else Found
+  GetOrderHandler -> GetOrderHandler: map Order → DTO
+  GetOrderHandler --> OrderController: DTO
+  deactivate GetOrderHandler
+  OrderController --> Client: 200 OK (JSON)
+end
+
+autonumber stop
+
+legend left
+  | Layer | Sample |
+  | Presentation | <#C7F9CC> |
+  | Application | <#FFF3B0> |
+  | Domain | <#E8EAED> |
+  | Infrastructure (Adapters/Persistence) | <#FFD6A5> |
+  | External Actor/System | <#AEE3FF> |
+endlegend
+
+footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]
+@enduml
