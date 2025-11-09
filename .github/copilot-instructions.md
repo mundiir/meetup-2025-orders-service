@@ -293,20 +293,69 @@ Purpose
 Requirements
 - Footer: Component diagram includes a footer link back to the C4 Container diagram.
   - Footer target: https://mundiir.github.io/meetup-2025-landscape/c4-containers.svg
-- External dependencies: Place external systems around the Orders Service boundary (outside System_Boundary).
-  - Examples: Payment Service, Promo Service API, SQLite (as external DB container for persistence).
-- Adapters communicate to external containers: model relations from internal ports/adapters to those external containers (HTTP or SQL labels as appropriate).
-- UseCases link to sequence diagrams: internal UseCase components must have $link attributes pointing to their sequence diagram SVGs (e.g., sequence-create-order.svg).
+- External dependencies: Place external systems around the Orders Service boundary (outside System_Boundary or Container_Boundary).
+  - Examples: Payment Provider, Promo Service, FX Service, Risk Engine, Orders Database (SQLite).
+- Adapters communicate to external containers: model relations from internal adapters/ports to external containers with protocol labels (HTTP/HTTPS/Reads/Writes).
+- UseCases link to sequence diagrams: Application Service components must have $link attributes pointing to their sequence diagram SVGs (e.g., sequence-create-order.svg, sequence-get-order.svg).
 - Sequence diagrams return link: each sequence diagram includes a footer link back to the C4 Component diagram (docs/c4-component.svg).
-- Data store to ERD: the external data store component (SQLite) must include a $link to er.svg so viewers can navigate to the Entity-Relationship diagram.
+- Data store to ERD: the Orders Database component includes $link="er.svg".
+- Code anchors: If a component has no generated SVG yet, link directly to its source folder in GitHub or omit link until diagram exists.
 
 Implementation Hints (PlantUML C4)
-- Use System_Boundary(...) for the service; define Component(...) inside for UseCases and adapters/ports.
-- Define external systems with System_Ext(...) and SystemDb_Ext(...), placed outside the boundary.
-- Use Rel(source, target, "label") to show adapter→external relations.
-- Use $link="<svg>" on Component/System elements to wire navigation (UseCases→sequence, SQLite→er.svg).
-- Keep the footer backlink to the container diagram in c4-component.puml.
+- Use Container_Boundary(...) (preferred) or System_Boundary(...) for the service; define Component(...) inside for API, UseCases, adapters.
+- External systems: use Container_Ext(...), ContainerDb(...), System_Ext(...), SystemDb_Ext(...).
+- Use Rel(source, target, "label") for interactions; keep verbs/action concise.
+- Use $link for navigation: sequence diagrams, ERD, source folders.
+- Keep footer backlink consistent.
+
+Example (Container_Boundary with UseCase SVG links, ERD link, and code/source links)
+```
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_TOP_DOWN()
+
+title Component - Orders Service
+
+Container_Boundary(orders_cmp, "Orders Service") {
+  Component(orders_api, "API", "HTTP/REST")
+  Component(orders_uc1, "Get Order Use Case", "Application Service", $link="sequence-get-order.svg")
+  Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence-create-order.svg")
+  Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Persistence")
+  Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Http")
+  Component(orders_fx, "FxConverter (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
+  Component(orders_promo, "PromoService (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
+  Component(orders_risk, "RiskChecker (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
+}
+
+' External dependencies around the container (Containers)
+ContainerDb(orders_db, "Orders Database", "SQLite", $link="er.svg")
+Container_Ext(payment_sys, "Payment Provider", "External System")
+Container_Ext(promo_sys, "Promo Service", "External System")
+Container_Ext(fx_sys, "FX Service", "External System")
+Container_Ext(risk_sys, "Risk Engine", "External System")
+
+Rel(orders_api, orders_app, "Handle Create Order request")
+Rel(orders_api, orders_uc1, "Handle Get Order request")
+Rel(orders_app, orders_promo, "Calculate discount")
+Rel(orders_app, orders_fx, "Convert to charge currency")
+Rel(orders_app, orders_risk, "Risk evaluation")
+Rel(orders_app, orders_pay, "Process payment")
+Rel(orders_app, orders_repo, "Persist order")
+Rel(orders_uc1, orders_repo, "Retrieve order")
+
+' Adapters talk to external containers
+Rel(orders_repo, orders_db, "Reads/Writes")
+Rel(orders_pay, payment_sys, "HTTPS")
+Rel(orders_promo, promo_sys, "HTTP")
+Rel(orders_fx, fx_sys, "HTTP")
+Rel(orders_risk, risk_sys, "HTTP")
+
+footer [[https://mundiir.github.io/meetup-2025-landscape/c4-containers.svg Back to Container]]
+@enduml
+```
 
 Quality & Evolution
-- Keep the diagram navigable: ensure links resolve after CI publishes docs/ to Pages.
-- When new UseCases or adapters are added, update components, external relations, and links.
+- Ensure links resolve post-publish (GitHub Pages).
+- Update components/relations when new UseCases or adapters added.

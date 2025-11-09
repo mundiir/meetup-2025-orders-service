@@ -320,8 +320,9 @@ function updateC4Component(string $c4File, array $useCases): void
         $useCaseReadable = preg_replace('/([a-z])([A-Z])/', '$1 $2', $useCase);
         $sequenceFile = 'sequence-' . strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $useCase)) . '.svg';
 
-        $pattern = '/Component\(orders_app,\s*"' . preg_quote($useCaseReadable, '/') . '\s+Use\s+Case",\s*"Application Service",\s*\$link="[^"]*"\)/';
-        $replacement = 'Component(orders_app, "' . $useCaseReadable . ' Use Case", "Application Service", $link="' . $sequenceFile . '")';
+        // Match any Component ID for this Use Case and update its $link to the generated SVG
+        $pattern = '/Component\(([^,]+),\s*"' . preg_quote($useCaseReadable, '/') . '\s+Use\s+Case",\s*"Application Service",\s*\$link="[^"]*"\)/';
+        $replacement = 'Component($1, "' . $useCaseReadable . ' Use Case", "Application Service", $link="' . $sequenceFile . '")';
 
         $content = preg_replace($pattern, $replacement, $content);
     }
