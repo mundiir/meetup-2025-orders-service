@@ -31,7 +31,7 @@ jobs:
         run: php scripts/generate-usecase-diagrams.php
 
       - name: Process diagrams with PlantUML
-        uses: Timmy/plantuml-action@v1
+        uses: dreamsinbits/export-plantuml-action@v1
         with:
           args: '-tsvg docs/*.puml'
 
