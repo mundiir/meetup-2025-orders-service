@@ -12,5 +12,5 @@ The Sequence Diagram must contain all cases.
 The Sequence Diagram must contain activations.
 
 Next, update the c4-component diagram and add a link to the generated Sequence Diagram. 
-Use https://github.com/Timmy/plantuml-action and generate the SVG with the command with args: '-tsvg docs/*.puml'
+Use https://github.com/dreamsinbits/export-plantuml-action and generate the SVG with the command with args: '-tsvg docs/*.puml'
 

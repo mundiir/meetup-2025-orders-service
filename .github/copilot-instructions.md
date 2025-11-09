@@ -10,7 +10,7 @@ It demonstrates domain-driven layering (Domain, Application, Infrastructure, Pre
 - Language: PHP (tested with 8.2; requires >=8.1).
 - Dependencies: Very small; prod requires only ext-pdo (for SQLite). Dev adds phpunit.
 - No framework; custom DI container and routing using built‑in PHP server.
-- Diagrams: PlantUML (optional CLI) processed in CI via `Timmy/plantuml-action`.
+- Diagrams: PlantUML (optional CLI) processed in CI via `dreamsinbits/export-plantuml-action`.
 - No formal linter config present; rely on `php -l` (syntax) + tests.
 
 Approximate size: Small (<150 source PHP files). Fast test cycle (<1s).
