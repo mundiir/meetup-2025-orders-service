@@ -284,3 +284,29 @@ endlegend
 Quality & Evolution
 - Keep domain errors distinct from HTTP responses.
 - Introduce new domain exceptions as needed and update diagrams; Presentation layer alone maps them to HTTP.
+
+## 17. C4 Component Diagram Rules (Standardized)
+Purpose
+- Show internal components and their adapters/ports, and how they interact with external systems/containers.
+- Provide navigation between C4 levels and related diagrams.
+
+Requirements
+- Footer: Component diagram includes a footer link back to the C4 Container diagram.
+  - Footer target: https://mundiir.github.io/meetup-2025-landscape/c4-containers.svg
+- External dependencies: Place external systems around the Orders Service boundary (outside System_Boundary).
+  - Examples: Payment Service, Promo Service API, SQLite (as external DB container for persistence).
+- Adapters communicate to external containers: model relations from internal ports/adapters to those external containers (HTTP or SQL labels as appropriate).
+- UseCases link to sequence diagrams: internal UseCase components must have $link attributes pointing to their sequence diagram SVGs (e.g., sequence-create-order.svg).
+- Sequence diagrams return link: each sequence diagram includes a footer link back to the C4 Component diagram (docs/c4-component.svg).
+- Data store to ERD: the external data store component (SQLite) must include a $link to er.svg so viewers can navigate to the Entity-Relationship diagram.
+
+Implementation Hints (PlantUML C4)
+- Use System_Boundary(...) for the service; define Component(...) inside for UseCases and adapters/ports.
+- Define external systems with System_Ext(...) and SystemDb_Ext(...), placed outside the boundary.
+- Use Rel(source, target, "label") to show adapter→external relations.
+- Use $link="<svg>" on Component/System elements to wire navigation (UseCases→sequence, SQLite→er.svg).
+- Keep the footer backlink to the container diagram in c4-component.puml.
+
+Quality & Evolution
+- Keep the diagram navigable: ensure links resolve after CI publishes docs/ to Pages.
+- When new UseCases or adapters are added, update components, external relations, and links.

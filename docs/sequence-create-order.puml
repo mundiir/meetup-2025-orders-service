@@ -1,5 +1,5 @@
 @startuml
-' Create Order — Sequence with ports (two-hop), external Promo (blue), colored exception arrows
+' Create Order — Sequence (real code names; ports + two-hop; colored legend)
 autonumber
 
 actor Client #AEE3FF
@@ -9,14 +9,14 @@ box "Orders Service" #DDDDDD
   participant CreateOrderHandler #FFF3B0
   participant Order #E8EAED
   participant OrderRepository #FFD6A5
-  participant PromoService #FFD6A5
   participant FxConverter #FFD6A5
   participant RiskChecker #FFD6A5
+  participant PromoService #FFD6A5
   participant PaymentGateway #FFD6A5
 end box
 
 participant "Promo 3rd‑party" as PromoAPI #AEE3FF
-participant "Payment Service" as PaySvc #AEE3FF
+participant "Payment Service" as PaymentAPI #AEE3FF
 participant "Data Store" as DataStore #FFD6A5
 
 Client -> OrderController: POST /orders (Create Order)
@@ -27,8 +27,6 @@ CreateOrderHandler -> CreateOrderHandler: Validate currency & amount
 alt UnsupportedCurrencyException
   CreateOrderHandler -[#FFF3B0]-> OrderController: UnsupportedCurrencyException
   OrderController --> Client: 400 Unsupported currency
-  deactivate CreateOrderHandler
-  return
 else Valid currency
   CreateOrderHandler -> Order: create(amount, currency)
 end
@@ -41,7 +39,7 @@ PromoService --> CreateOrderHandler: discountPercent
 deactivate PromoService
 CreateOrderHandler -> CreateOrderHandler: apply discount
 
-CreateOrderHandler -> FxConverter: convertToUSD(discounted)
+CreateOrderHandler -> FxConverter: convertToUSD(discountedAmount)
 activate FxConverter
 FxConverter --> CreateOrderHandler: chargedAmountUSD
 deactivate FxConverter
@@ -54,33 +52,28 @@ deactivate RiskChecker
 alt OrderRejectedException
   CreateOrderHandler -[#FFF3B0]-> OrderController: OrderRejectedException
   OrderController --> Client: 422 Order rejected
-  deactivate CreateOrderHandler
-  return
 else Accepted
   alt Free order (chargedAmountUSD == 0)
     CreateOrderHandler -> CreateOrderHandler: transactionId = free_* (skip payment)
   else Paid order
-    loop Retry up to 3
+    loop Retry up to 3 attempts
       CreateOrderHandler -> PaymentGateway: charge(chargedAmountUSD, USD)
       activate PaymentGateway
-      PaymentGateway -> PaySvc: charge
+      PaymentGateway -> PaymentAPI: charge
       alt TransientPaymentException (attempt < 3)
-        PaySvc --> PaymentGateway: transient error
+        PaymentAPI --> PaymentGateway: transient error
         PaymentGateway --> CreateOrderHandler: transient failure
-        deactivate PaymentGateway
       else Success
-        PaySvc --> PaymentGateway: transactionId
+        PaymentAPI --> PaymentGateway: transactionId
         PaymentGateway --> CreateOrderHandler: transactionId
-        deactivate PaymentGateway
         break
       end
+      deactivate PaymentGateway
     end
     alt TransientPaymentException (after 3 attempts)
       CreateOrderHandler -[#FFF3B0]-> OrderController: TransientPaymentException
       OrderController --> Client: 503 Payment failed
-      deactivate CreateOrderHandler
-      return
-    else Charged
+    else Payment succeeded
       CreateOrderHandler -> OrderRepository: save(order)
       activate OrderRepository
       OrderRepository -> DataStore: write
@@ -93,6 +86,8 @@ else Accepted
   OrderController --> Client: 201 Created
 end
 
+destroy CreateOrderHandler
+
 note over CreateOrderHandler
 OrderCreated event:
 - orderId, original amount/currency
@@ -101,8 +96,6 @@ OrderCreated event:
 - transactionId (free_* or gateway)
 - occurredAt timestamp
 end note
-
-autonumber stop
 
 legend left
   | Layer | Sample |

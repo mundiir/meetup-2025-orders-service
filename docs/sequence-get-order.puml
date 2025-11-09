@@ -1,5 +1,5 @@
 @startuml
-' Get Order — Sequence with domain exception mapping
+' Get Order — Sequence (real code names; repository + data store + domain exception mapping)
 autonumber
 
 actor Client #AEE3FF
@@ -16,26 +16,29 @@ Client -> OrderController: GET /orders/{id} (Retrieve Order)
 OrderController -> GetOrderHandler: Execute
 activate GetOrderHandler
 
-GetOrderHandler -> OrderRepository: findById(id)
-activate OrderRepository
-OrderRepository -> DataStore: read
-DataStore --> OrderRepository: Order | null
-OrderRepository --> GetOrderHandler: Order | null
-deactivate OrderRepository
+GetOrderHandler -> GetOrderHandler: Validate input
+alt Invalid input (4xx)
+  GetOrderHandler -[#FFF3B0]-> OrderController: ValidationException
+  OrderController --> Client: 400 Invalid request
+else Valid
+  GetOrderHandler -> OrderRepository: get(id)
+  activate OrderRepository
+  OrderRepository -> DataStore: read
+  DataStore --> OrderRepository: Order|null
+  OrderRepository --> GetOrderHandler: Order|null
+  deactivate OrderRepository
+end
 
 alt OrderNotFoundException
-  GetOrderHandler --> OrderController: OrderNotFoundException
+  GetOrderHandler -[#FFF3B0]-> OrderController: OrderNotFoundException
   OrderController --> Client: 404 Not Found
-  deactivate GetOrderHandler
-  return
 else Found
-  GetOrderHandler -> GetOrderHandler: map Order → DTO
+  GetOrderHandler -> GetOrderHandler: Map Order → DTO
   GetOrderHandler --> OrderController: DTO
-  deactivate GetOrderHandler
   OrderController --> Client: 200 OK (JSON)
 end
 
-autonumber stop
+destroy GetOrderHandler
 
 legend left
   | Layer | Sample |

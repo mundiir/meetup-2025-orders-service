@@ -6,39 +6,32 @@ LAYOUT_TOP_DOWN()
 
 title Component - Orders Service
 
-Container_Boundary(orders_cmp, "Orders Service") {
-  Component(orders_api, "API", "HTTP/REST")
-  Component(orders_uc1, "Get Order Use Case", "Application Service", $link="sequence-get-order.svg")
-  Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence-create-order.svg")
-  Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Persistence")
-  Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Http")
-  Component(orders_fx, "FxConverter (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
-  Component(orders_promo, "PromoService (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
-  Component(orders_risk, "RiskChecker (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
+System_Boundary(orders_sys, "Orders Service") {
+  Component(orders_create, "Create Order Use Case", "Application Service", $link="sequence-create-order.svg")
+  Component(orders_get, "Get Order Use Case", "Application Service", $link="sequence-get-order.svg")
+  Component(orders_repo, "Order Repository", "Persistence Adapter")
+  Component(orders_pay, "Payment Gateway Port", "Port")
+  Component(orders_promo, "Promo Service Port", "Port")
+  Component(orders_fx, "FX Converter", "Service")
+  Component(orders_risk, "Risk Checker", "Service")
 }
 
-' External dependencies around the container (Containers)
-ContainerDb(orders_db, "Orders Database", "SQLite", $link="er.svg")
-Container_Ext(payment_sys, "Payment Provider", "External System")
-Container_Ext(promo_sys, "Promo Service", "External System")
-Container_Ext(fx_sys, "FX Service", "External System")
-Container_Ext(risk_sys, "Risk Engine", "External System")
+' External dependencies surrounding the microservice
+System_Ext(payment_api, "Payment Service", "External payment processor")
+System_Ext(promo_api, "Promo Service", "3rd‑party promo/discount API")
+SystemDb_Ext(sqlite_db, "SQLite", "Orders persistence (file or memory fallback)", $link="er.svg")
 
-Rel(orders_api, orders_app, "Handle Create Order request")
-Rel(orders_api, orders_uc1, "Handle Get Order request")
-Rel(orders_app, orders_promo, "Calculate discount")
-Rel(orders_app, orders_fx, "Convert to charge currency")
-Rel(orders_app, orders_risk, "Risk evaluation")
-Rel(orders_app, orders_pay, "Process payment")
-Rel(orders_app, orders_repo, "Persist order")
-Rel(orders_uc1, orders_repo, "Retrieve order")
+Rel(orders_create, orders_repo, "save(order)")
+Rel(orders_create, orders_pay, "charge()")
+Rel(orders_create, orders_promo, "getDiscountPercent()")
+Rel(orders_create, orders_fx, "convert()")
+Rel(orders_create, orders_risk, "isAllowed()")
+Rel(orders_get, orders_repo, "get(id)")
 
-' Adapters talk to external containers
-Rel(orders_repo, orders_db, "Reads/Writes")
-Rel(orders_pay, payment_sys, "HTTPS")
-Rel(orders_promo, promo_sys, "HTTP")
-Rel(orders_fx, fx_sys, "HTTP")
-Rel(orders_risk, risk_sys, "HTTP")
+' Adapter → External relations
+Rel(orders_pay, payment_api, "HTTP charge()")
+Rel(orders_promo, promo_api, "HTTP getDiscountPercent()")
+Rel(orders_repo, sqlite_db, "SQL read/write")
 
 footer [[https://mundiir.github.io/meetup-2025-landscape/c4-containers.svg Back to Container]]
 @enduml
