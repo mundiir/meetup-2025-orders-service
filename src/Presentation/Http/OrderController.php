@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Interfaces\Http;
+namespace App\Presentation\Http;
 
 use App\Application\Exception\OrderRejectedException;
 use App\Application\Exception\TransientPaymentException;
@@ -46,7 +46,8 @@ final class OrderController
         } catch (UnsupportedCurrencyException $e) {
             return [400, ['error' => $e->getMessage()]];
         } catch (OrderRejectedException $e) {
-            return [403, ['error' => $e->getMessage()]];
+            // Align with sequence diagrams: risk rejection => 422 Unprocessable Entity
+            return [422, ['error' => $e->getMessage()]];
         } catch (TransientPaymentException $e) {
             return [503, ['error' => 'Payment temporarily unavailable']];
         } catch (\Throwable $e) {
@@ -86,3 +87,4 @@ final class OrderController
         ]];
     }
 }
+

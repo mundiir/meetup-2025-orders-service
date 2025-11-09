@@ -1,70 +1,110 @@
 @startuml
-' CreateOrder Use Case — Application Layer with activations
+' Create Order — Sequence (real code names; ports + two-hop; colored legend)
+autonumber
 
-actor Client
-participant "OrderController" as Controller
-participant "CreateOrderHandler" as Handler
-participant PromoService as Promo
-participant FxConverter as Fx
-participant RiskChecker as Risk
-participant PaymentGateway as Payment
-participant OrderRepository as Repo
+actor Client #AEE3FF
 
-Client -> Controller: POST /orders
-Controller -> Handler: __invoke(CreateOrderCommand)
-activate Handler
+box "Orders Service" #DDDDDD
+  participant OrderController #C7F9CC
+  participant CreateOrderHandler #FFF3B0
+  participant Order #E8EAED
+  participant OrderRepository #FFD6A5
+  participant FxConverter #FFD6A5
+  participant RiskChecker #FFD6A5
+  participant PromoService #FFD6A5
+  participant PaymentGateway #FFD6A5
+end box
 
-Handler -> Handler: validate currency
-alt Unsupported currency
-  Handler --> Controller: throw UnsupportedCurrency
-  deactivate Handler
-  return
+participant "Promo 3rd‑party" as PromoAPI #AEE3FF
+participant "Payment Service" as PaymentAPI #AEE3FF
+participant "Data Store" as DataStore #FFD6A5
+
+Client -> OrderController: POST /orders (Create Order)
+OrderController -> CreateOrderHandler: Execute
+activate CreateOrderHandler
+
+CreateOrderHandler -> CreateOrderHandler: Validate currency & amount
+alt UnsupportedCurrencyException
+  CreateOrderHandler --> OrderController: UnsupportedCurrencyException
+  OrderController --> Client: 400 Unsupported currency
+else Valid currency
+  CreateOrderHandler -> Order: create(amount, currency)
 end
 
-Handler -> Promo: getDiscountPercent(promoCode, currency)
-activate Promo
-Promo --> Handler: percent
-deactivate Promo
+CreateOrderHandler -> PromoService: getDiscountPercent (0–100%)
+activate PromoService
+PromoService -> PromoAPI: request
+PromoAPI --> PromoService: percent
+PromoService --> CreateOrderHandler: discountPercent
+deactivate PromoService
+CreateOrderHandler -> CreateOrderHandler: apply discount
 
-Handler -> Fx: convert(discountedAmount, currency, "USD")
-activate Fx
-Fx --> Handler: chargedAmount
-deactivate Fx
+CreateOrderHandler -> FxConverter: convertToUSD(discountedAmount)
+activate FxConverter
+FxConverter --> CreateOrderHandler: chargedAmountUSD
+deactivate FxConverter
 
-Handler -> Risk: isAllowed(order, chargedAmount, "USD")
-activate Risk
-Risk --> Handler: allowed?
-deactivate Risk
+CreateOrderHandler -> RiskChecker: assess(chargedAmountUSD)
+activate RiskChecker
+RiskChecker --> CreateOrderHandler: allow?
+deactivate RiskChecker
 
-alt Not allowed
-  Handler --> Controller: throw OrderRejected
-  deactivate Handler
-  return
-end
-
-alt chargedAmount == 0
-  Handler -> Handler: transactionId = "free_*"
-else
-  loop up to 3 attempts
-    Handler -> Payment: charge(chargedAmount, "USD")
-    activate Payment
-    Payment --> Handler: transactionId
-    deactivate Payment
-  else TransientPaymentException
-    Handler -> Handler: exponential backoff
+alt OrderRejectedException
+  CreateOrderHandler --> OrderController: OrderRejectedException
+  OrderController --> Client: 422 Order rejected
+else Accepted
+  alt Free order (chargedAmountUSD == 0)
+    CreateOrderHandler -> CreateOrderHandler: transactionId = free_* (skip payment)
+  else Paid order
+    loop Retry up to 3 attempts
+      CreateOrderHandler -> PaymentGateway: charge(chargedAmountUSD, USD)
+      activate PaymentGateway
+      PaymentGateway -> PaymentAPI: charge
+      alt TransientPaymentException (attempt < 3)
+        PaymentAPI --> PaymentGateway: transient error
+        PaymentGateway --> CreateOrderHandler: transient failure
+      else Success
+        PaymentAPI --> PaymentGateway: transactionId
+        PaymentGateway --> CreateOrderHandler: transactionId
+        break
+      end
+      deactivate PaymentGateway
+    end
+    alt TransientPaymentException (after 3 attempts)
+      CreateOrderHandler --> OrderController: TransientPaymentException
+      OrderController --> Client: 503 Payment failed
+    else Payment succeeded
+      CreateOrderHandler -> OrderRepository: save(order)
+      activate OrderRepository
+      OrderRepository -> DataStore: write
+      DataStore --> OrderRepository: stored
+      OrderRepository --> CreateOrderHandler: ok
+      deactivate OrderRepository
+    end
   end
+  CreateOrderHandler --> OrderController: OrderCreated (domain event)
+  OrderController --> Client: 201 Created
 end
 
-Handler -> Repo: save(order)
-activate Repo
-Repo --> Handler: ok
-deactivate Repo
+destroy CreateOrderHandler
 
-Handler --> Controller: OrderCreated
-deactivate Handler
-Controller --> Client: 201 Created
+note over CreateOrderHandler
+OrderCreated event:
+- orderId, original amount/currency
+- chargedAmountUSD
+- discountPercent (0–100)
+- transactionId (free_* or gateway)
+- occurredAt timestamp
+end note
+
+legend left
+  | Layer | Sample |
+  | Presentation | <#C7F9CC> |
+  | Application | <#FFF3B0> |
+  | Domain | <#E8EAED> |
+  | Infrastructure (Adapters/Persistence) | <#FFD6A5> |
+  | External Actor/System | <#AEE3FF> |
+endlegend
 
 footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]
-
 @enduml
-

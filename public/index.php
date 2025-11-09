@@ -3,7 +3,8 @@
 declare(strict_types=1);
 
 use App\Application\UseCase\CreateOrder\CreateOrderHandler;
-use App\Interfaces\Http\OrderController;
+use App\Application\UseCase\GetOrder\GetOrderHandler;
+use App\Presentation\Http\OrderController;
 
 // Autoload via Composer if available, otherwise use a tiny PSR-4 fallback for App\
 $autoload = __DIR__ . '/../vendor/autoload.php';
@@ -39,9 +40,20 @@ if ($method === 'OPTIONS') {
 header('Content-Type: application/json');
 
 try {
+    $controller = new OrderController(
+        $container->get(CreateOrderHandler::class),
+        $container->get(GetOrderHandler::class)
+    );
+
     if ($method === 'POST' && $path === '/orders') {
-        $controller = new OrderController($container->get(CreateOrderHandler::class));
         [$status, $payload] = $controller->create();
+        http_response_code($status);
+        echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    if ($method === 'GET' && preg_match('#^/orders/([A-Za-z0-9\-]+)$#', $path, $m)) {
+        [$status, $payload] = $controller->show($m[1]);
         http_response_code($status);
         echo json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         exit;

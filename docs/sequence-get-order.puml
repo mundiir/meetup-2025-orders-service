@@ -1,55 +1,55 @@
 @startuml
-' GetOrder Use Case — Application Layer with activations
+' Get Order — Sequence (real code names; ports + two-hop; colored legend)
+autonumber
 
-skinparam sequenceMessageAlign center
-skinparam BoxPadding 10
+actor Client #AEE3FF
 
-actor Client #lightblue
-participant "OrderController" as Controller #lightyellow
-participant "GetOrderHandler" as Handler #lightgreen
-participant OrderRepository as Repo #lightcyan
+box "Orders Service" #DDDDDD
+  participant OrderController #C7F9CC
+  participant GetOrderHandler #FFF3B0
+  participant OrderRepository #FFD6A5
+end box
 
-Client -> Controller: GET /orders/{id}
-activate Controller #lightyellow
+participant "Data Store" as DataStore #FFD6A5
 
-Controller -> Handler: __invoke(GetOrderQuery)
-activate Handler #lightgreen
+Client -> OrderController: GET /orders/{id} (Retrieve Order)
+OrderController -> GetOrderHandler: Execute
+activate GetOrderHandler
 
-Handler -> Handler: OrderId::fromString(orderId)
-note right: Validate and convert\nstring ID to ValueObject
-
-alt Invalid OrderId (empty)
-  Handler --> Controller: throw InvalidArgumentException
-  note right #pink: Exception thrown\nfor invalid ID format
-  deactivate Handler
-  Controller --> Client: 400 Bad Request
-  deactivate Controller
+GetOrderHandler -> GetOrderHandler: Validate input
+alt Invalid input (4xx)
+  GetOrderHandler --> OrderController: Error response
+  deactivate GetOrderHandler
   return
 end
 
-Handler -> Repo: get(orderId)
-activate Repo #lightcyan
-Repo --> Handler: order?
-deactivate Repo
+GetOrderHandler -> OrderRepository: get(id)
+activate OrderRepository
+OrderRepository -> DataStore: read
+DataStore --> OrderRepository: Order | null
+OrderRepository --> GetOrderHandler: Order | null
+deactivate OrderRepository
 
-alt Order not found
-  Handler --> Controller: throw OrderNotFoundException
-  note right #pink: Exception thrown\nwhen order\ndoes not exist
-  deactivate Handler
-  Controller --> Client: 404 Not Found
-  deactivate Controller
+alt OrderNotFoundException (404)
+  GetOrderHandler --> OrderController: OrderNotFoundException
+  deactivate GetOrderHandler
+  OrderController --> Client: 404 Not Found
   return
+else Found (200)
+  GetOrderHandler -> GetOrderHandler: Map Order → DTO
+  GetOrderHandler --> OrderController: DTO
+  deactivate GetOrderHandler
+  OrderController --> Client: 200 OK (JSON)
 end
 
-Handler -> Handler: Build GetOrderResult\nfrom Order entity
-note right: Extract order details:\n- id\n- amountCents\n- currency\n- status\n- createdAt
-
-Handler --> Controller: GetOrderResult
-deactivate Handler
-
-Controller --> Client: 200 OK\n(JSON response)
-deactivate Controller
+legend left
+  | Layer | Sample |
+  | Presentation | <#C7F9CC> |
+  | Application | <#FFF3B0> |
+  | Domain | <#E8EAED> |
+  | Infrastructure (Adapters/Persistence/3rd Party) | <#FFD6A5> |
+  | External | <#AEE3FF> |
+endlegend
 
 footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]
-
 @enduml
