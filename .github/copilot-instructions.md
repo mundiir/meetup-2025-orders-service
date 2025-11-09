@@ -153,18 +153,39 @@ php scripts/generate-usecase-diagrams.php
 Proceed with confidence; keep changes minimal, verified, and documented in PR descriptions when altering architecture.
 
 ## 16. Sequence Diagram Rules (Standardized & Abstract)
+Foundation & Notation
+- Basis: Clean Architecture layering drives participant selection and boundaries. Always reflect the separation: Presentation (entry adapters),
+  Application (use case orchestrators), Domain (entities/aggregates – include only when meaningful logic beyond trivial getters), Infrastructure
+  (technical adapters, repositories, ports), External Actors/Systems (clients, 3rd‑party services, databases outside core domain logic).
+- Tooling: Authored in PlantUML sequence diagram syntax with autonumber. Use participants + a single service box to show the system boundary,
+  color codes below for each layer, activations to emphasize handler lifetime, alt/else blocks for exception and conditional paths, loop blocks for
+  payment retries (show max attempts), and break when exiting early. Prefer standard PlantUML keywords (alt, loop, else, break) over custom
+  notation for clarity and consistency.
+- Exception Semantics: Domain exceptions (e.g., UnsupportedCurrencyException) are raised in Application and passed to Presentation; Presentation
+  alone maps them to HTTP status codes. External/technical errors must be converted to Domain-relevant exceptions before leaving Application.
+- Message Labeling: HTTP verbs/paths appear only on Client → Controller arrows (Presentation). Domain events are distinct messages from Application
+  back to Presentation before HTTP response.
+- Line Length: Keep each PlantUML source line ≤ 240 characters; wrap long message labels with \n, use concise participant aliases if needed.
+
 Purpose
 - Communicate behavior to stakeholders without requiring source code reading.
 - Favor architectural patterns while retaining real code names where meaningful.
 
 New Requirements (additive)
-- Exception Handling: Show all meaningful exceptions explicitly (UnsupportedCurrencyException, OrderRejectedException, TransientPaymentException, OrderNotFoundException). Use alt blocks named with the exception. Application arrows carry DOMAIN errors only (class name / semantic), never HTTP codes.
-- Application↔Domain Interaction: Always depict when the Application layer invokes domain creation or significant domain logic (e.g., Order::create). If Domain only supplies trivial getters with no transformation, you may omit the Domain participant (legend still lists Domain color).
-- HTTP Protocol: HTTP verbs/paths appear only in the Presentation layer messages (Client → Controller). HTTP status codes are produced ONLY by the Presentation layer. Application layer does NOT emit HTTP errors.
-- Persistence Classification: Persistence (Repository + Data Store) is part of Infrastructure. Use Infrastructure color for repository and external storage; no separate Persistence layer color.
-- External Services: PaymentGateway (Infrastructure color) and PromoService (External blue) reside outside the service box. Ports inside call these external participants.
+- Exception Handling: Show all meaningful exceptions explicitly (UnsupportedCurrencyException, OrderRejectedException, TransientPaymentException,
+  OrderNotFoundException). Use alt blocks named with the exception. Application arrows carry DOMAIN errors only (class name / semantic), never HTTP codes.
+- Application↔Domain Interaction: Always depict when the Application layer invokes domain creation or significant domain logic (e.g., Order::create).
+  If Domain only supplies trivial getters with no transformation, you may omit the Domain participant (legend still lists Domain color).
+- HTTP Protocol: HTTP verbs/paths appear only in the Presentation layer messages (Client → Controller). HTTP status codes are produced ONLY by the
+  Presentation layer. Application layer does NOT emit HTTP errors.
+- Persistence Classification: Persistence (Repository + Data Store) is part of Infrastructure. Use Infrastructure color for repository and external
+  storage; no separate Persistence layer color.
+- External Services: PaymentGateway (Infrastructure color) and PromoService (External blue) reside outside the service box. Ports inside call these
+  external participants.
 - Ports depiction (required): Show Application → Port (inside) then Port/Adapter → External service (outside). Messages labeled with port operations.
-- 3rd‑party Errors: Errors from external services are converted into Domain (or Domain-relevant) exceptions at the Application layer before reaching Presentation. Diagrams show external failure returning into port, port returning error to Application, Application raising Domain exception to Presentation, then Presentation mapping to HTTP code.
+- 3rd‑party Errors: Errors from external services are converted into Domain (or Domain-relevant) exceptions at the Application layer before reaching
+  Presentation. Diagrams show external failure returning into port, port returning error to Application, Application raising Domain exception to
+  Presentation, then Presentation mapping to HTTP code.
 
 Participants (via color legend; no layer words in labels)
 - Presentation: #C7F9CC (Controllers, AMQP listeners, other entry points)
@@ -219,7 +240,7 @@ activate CreateOrderHandler
 
 CreateOrderHandler -> Order: create(amount, currency)
 alt UnsupportedCurrencyException
-  CreateOrderHandler -[#FFF3B0]-> OrderController: UnsupportedCurrencyException
+  CreateOrderHandler --> OrderController: UnsupportedCurrencyException
   OrderController --> Client: 400 Unsupported currency
 else Valid currency
   CreateOrderHandler -> PromoService: getDiscountPercent (0–100%)
@@ -231,7 +252,7 @@ else Valid currency
   CreateOrderHandler -> RiskChecker: assess(chargedAmountUSD)
   RiskChecker --> CreateOrderHandler: allowed?
   alt OrderRejectedException
-    CreateOrderHandler -[#FFF3B0]-> OrderController: OrderRejectedException
+    CreateOrderHandler --> OrderController: OrderRejectedException
     OrderController --> Client: 422 Order rejected
   else Accepted
     alt Free order (chargedAmountUSD == 0)
@@ -250,7 +271,7 @@ else Valid currency
         end
       end
       alt TransientPaymentException (after 3 attempts)
-        CreateOrderHandler -[#FFF3B0]-> OrderController: TransientPaymentException
+        CreateOrderHandler --> OrderController: TransientPaymentException
         OrderController --> Client: 503 Payment failed
       else Charged
         CreateOrderHandler -> OrderRepository: save(order)
@@ -259,7 +280,7 @@ else Valid currency
         OrderRepository --> CreateOrderHandler: ok
       end
     end
-    CreateOrderHandler -[#FFF3B0]-> OrderController: OrderCreated (domain event)
+    CreateOrderHandler --> OrderController: OrderCreated (domain event)
     OrderController --> Client: 201 Created
   end
 end
@@ -268,7 +289,6 @@ end
 
 Note:
 - Exception alt blocks named with Domain exception classes; Application emits domain exception to Presentation; Presentation maps to HTTP.
-- Colored exception arrows use source layer color (#FFF3B0 for Application).
 - External services (PromoService, PaymentGateway, PaymentAPI, PromoAPI) are outside the service box; ports are implied by handler calling them.
 - Domain event emission is separate from HTTP response.
 
@@ -286,6 +306,26 @@ Quality & Evolution
 - Introduce new domain exceptions as needed and update diagrams; Presentation layer alone maps them to HTTP.
 
 ## 17. C4 Component Diagram Rules (Standardized)
+Foundation & Notation
+- Basis: Clean Architecture layering informs component categorization. Show only meaningful boundary-crossing parts: Presentation (API/controller
+  entrypoint), Application (Use Case/Application Service components), Domain (only if a distinct domain module warrants a component; skip trivial
+  entities/value objects), Infrastructure (adapters: repositories, gateway clients, converters, risk/promo services), External Systems (payment
+  provider, promo service, FX, risk engine, database). Avoid mixing responsibilities inside a single component box.
+- Tooling: Use PlantUML with C4-PlantUML includes (Context + Component). Prefer Container_Boundary for the microservice boundary. Components inside
+  represent logical responsibilities, not classes. External systems use *Container_Ext*, *ContainerDb*, etc.
+- Naming Conventions: Use verb-noun form for Use Cases (Create Order Use Case, Get Order Use Case). Adapter components append “(Adapter)” to clarify
+  role (PaymentGateway (Adapter)). Keep names stable with code folder names where practical.
+- Links ($link): Required for navigability: Use Cases → their sequence diagram SVG; Database → ERD (er.svg); adapters may link to source folders until
+  specialized diagrams exist. Each sequence diagram reciprocally links back to the component diagram. Ensure relative paths resolve under docs/ when
+  published.
+- Layer Direction Rules: Arrows flow inward: Presentation → Application → Infrastructure → External. Domain (if shown) is used by Application but does
+  not directly depend on External systems. Do not draw External → Application arrows initiating use cases; initiation starts at Presentation.
+- Granularity: Avoid exploding every infrastructure detail; group closely related helpers unless they are explicit adapters (e.g., keep
+  SimpleFxConverter as FxConverter (Adapter)).
+- Evolution: When adding a new Use Case, add a Component with $link to its sequence diagram (generate diagram first). When introducing a new adapter
+  to an external system, add component + relation labeled with protocol (HTTP/HTTPS/Reads/Writes). Update footer only if container diagram URL changes.
+- Line Length: Keep each PlantUML source line ≤ 240 characters; wrap with \n inside labels, abbreviate component names only if necessary.
+
 Purpose
 - Show internal components and their adapters/ports, and how they interact with external systems/containers.
 - Provide navigation between C4 levels and related diagrams.
@@ -295,8 +335,10 @@ Requirements
   - Footer target: https://mundiir.github.io/meetup-2025-landscape/c4-containers.svg
 - External dependencies: Place external systems around the Orders Service boundary (outside System_Boundary or Container_Boundary).
   - Examples: Payment Provider, Promo Service, FX Service, Risk Engine, Orders Database (SQLite).
-- Adapters communicate to external containers: model relations from internal adapters/ports to external containers with protocol labels (HTTP/HTTPS/Reads/Writes).
-- UseCases link to sequence diagrams: Application Service components must have $link attributes pointing to their sequence diagram SVGs (e.g., sequence-create-order.svg, sequence-get-order.svg).
+- Adapters communicate to external containers: model relations from internal adapters/ports to external containers with protocol labels
+  (HTTP/HTTPS/Reads/Writes).
+- UseCases link to sequence diagrams: Application Service components must have $link attributes pointing to their sequence diagram SVGs (e.g.,
+  sequence-create-order.svg, sequence-get-order.svg).
 - Sequence diagrams return link: each sequence diagram includes a footer link back to the C4 Component diagram (docs/c4-component.svg).
 - Data store to ERD: the Orders Database component includes $link="er.svg".
 - Code anchors: If a component has no generated SVG yet, link directly to its source folder in GitHub or omit link until diagram exists.

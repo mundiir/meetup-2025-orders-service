@@ -25,7 +25,7 @@ activate CreateOrderHandler
 
 CreateOrderHandler -> CreateOrderHandler: Validate currency & amount
 alt UnsupportedCurrencyException
-  CreateOrderHandler -[#FFF3B0]-> OrderController: UnsupportedCurrencyException
+  CreateOrderHandler --> OrderController: UnsupportedCurrencyException
   OrderController --> Client: 400 Unsupported currency
 else Valid currency
   CreateOrderHandler -> Order: create(amount, currency)
@@ -50,7 +50,7 @@ RiskChecker --> CreateOrderHandler: allow?
 deactivate RiskChecker
 
 alt OrderRejectedException
-  CreateOrderHandler -[#FFF3B0]-> OrderController: OrderRejectedException
+  CreateOrderHandler --> OrderController: OrderRejectedException
   OrderController --> Client: 422 Order rejected
 else Accepted
   alt Free order (chargedAmountUSD == 0)
@@ -71,7 +71,7 @@ else Accepted
       deactivate PaymentGateway
     end
     alt TransientPaymentException (after 3 attempts)
-      CreateOrderHandler -[#FFF3B0]-> OrderController: TransientPaymentException
+      CreateOrderHandler --> OrderController: TransientPaymentException
       OrderController --> Client: 503 Payment failed
     else Payment succeeded
       CreateOrderHandler -> OrderRepository: save(order)
@@ -82,7 +82,7 @@ else Accepted
       deactivate OrderRepository
     end
   end
-  CreateOrderHandler -[#FFF3B0]-> OrderController: OrderCreated (domain event)
+  CreateOrderHandler --> OrderController: OrderCreated (domain event)
   OrderController --> Client: 201 Created
 end
 

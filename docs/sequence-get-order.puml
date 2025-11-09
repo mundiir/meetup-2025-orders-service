@@ -1,5 +1,5 @@
 @startuml
-' Get Order — Sequence (real code names; repository + data store + domain exception mapping)
+' Get Order — Sequence (real code names; ports + two-hop; colored legend)
 autonumber
 
 actor Client #AEE3FF
@@ -18,35 +18,37 @@ activate GetOrderHandler
 
 GetOrderHandler -> GetOrderHandler: Validate input
 alt Invalid input (4xx)
-  GetOrderHandler -[#FFF3B0]-> OrderController: ValidationException
-  OrderController --> Client: 400 Invalid request
-else Valid
-  GetOrderHandler -> OrderRepository: get(id)
-  activate OrderRepository
-  OrderRepository -> DataStore: read
-  DataStore --> OrderRepository: Order|null
-  OrderRepository --> GetOrderHandler: Order|null
-  deactivate OrderRepository
+  GetOrderHandler --> OrderController: Error response
+  deactivate GetOrderHandler
+  return
 end
 
-alt OrderNotFoundException
-  GetOrderHandler -[#FFF3B0]-> OrderController: OrderNotFoundException
+GetOrderHandler -> OrderRepository: get(id)
+activate OrderRepository
+OrderRepository -> DataStore: read
+DataStore --> OrderRepository: Order | null
+OrderRepository --> GetOrderHandler: Order | null
+deactivate OrderRepository
+
+alt OrderNotFoundException (404)
+  GetOrderHandler --> OrderController: OrderNotFoundException
+  deactivate GetOrderHandler
   OrderController --> Client: 404 Not Found
-else Found
+  return
+else Found (200)
   GetOrderHandler -> GetOrderHandler: Map Order → DTO
   GetOrderHandler --> OrderController: DTO
+  deactivate GetOrderHandler
   OrderController --> Client: 200 OK (JSON)
 end
-
-destroy GetOrderHandler
 
 legend left
   | Layer | Sample |
   | Presentation | <#C7F9CC> |
   | Application | <#FFF3B0> |
   | Domain | <#E8EAED> |
-  | Infrastructure (Adapters/Persistence) | <#FFD6A5> |
-  | External Actor/System | <#AEE3FF> |
+  | Infrastructure (Adapters/Persistence/3rd Party) | <#FFD6A5> |
+  | External | <#AEE3FF> |
 endlegend
 
 footer [[https://mundiir.github.io/meetup-2025-orders-service/c4-component.svg Back to C4 Component]]

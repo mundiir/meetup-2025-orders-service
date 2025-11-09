@@ -8,8 +8,8 @@ title Component - Orders Service
 
 Container_Boundary(orders_cmp, "Orders Service") {
   Component(orders_api, "API", "HTTP/REST")
-  Component(orders_uc1, "Get Order Use Case", "Application Service", $link="sequence-get-order.svg")
-  Component(orders_app, "Create Order Use Case", "Application Service", $link="sequence-create-order.svg")
+  Component(orders_uc_get, "Get Order Use Case", "Application Service", $link="sequence-get-order.svg")
+  Component(orders_uc_create, "Create Order Use Case", "Application Service", $link="sequence-create-order.svg")
   Component(orders_repo, "OrderRepository (Adapter)", "Persistence", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Persistence")
   Component(orders_pay, "PaymentGateway (Adapter)", "HTTP client", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Http")
   Component(orders_fx, "FxConverter (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
@@ -17,23 +17,21 @@ Container_Boundary(orders_cmp, "Orders Service") {
   Component(orders_risk, "RiskChecker (Adapter)", "Service", $link="https://github.com/mundiir/meetup-2025-orders-service/tree/main/src/Infrastructure/Service")
 }
 
-' External dependencies around the container
 ContainerDb(orders_db, "Orders Database", "SQLite", $link="er.svg")
 Container_Ext(payment_sys, "Payment Provider", "External System")
 Container_Ext(promo_sys, "Promo Service", "External System")
 Container_Ext(fx_sys, "FX Service", "External System")
 Container_Ext(risk_sys, "Risk Engine", "External System")
 
-Rel(orders_api, orders_app, "Handle Create Order request")
-Rel(orders_api, orders_uc1, "Handle Get Order request")
-Rel(orders_app, orders_promo, "Calculate discount")
-Rel(orders_app, orders_fx, "Convert to charge currency")
-Rel(orders_app, orders_risk, "Risk evaluation")
-Rel(orders_app, orders_pay, "Process payment")
-Rel(orders_app, orders_repo, "Persist order")
-Rel(orders_uc1, orders_repo, "Retrieve order")
+Rel(orders_api, orders_uc_create, "Handle Create Order request")
+Rel(orders_api, orders_uc_get, "Handle Get Order request")
+Rel(orders_uc_create, orders_promo, "Calculate discount")
+Rel(orders_uc_create, orders_fx, "Convert to charge currency")
+Rel(orders_uc_create, orders_risk, "Risk evaluation")
+Rel(orders_uc_create, orders_pay, "Process payment")
+Rel(orders_uc_create, orders_repo, "Persist order")
+Rel(orders_uc_get, orders_repo, "Retrieve order")
 
-' Adapters talk to external containers
 Rel(orders_repo, orders_db, "Reads/Writes")
 Rel(orders_pay, payment_sys, "HTTPS")
 Rel(orders_promo, promo_sys, "HTTP")
