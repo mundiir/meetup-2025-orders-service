@@ -3,10 +3,6 @@ name: Generate UseCase Diagrams on PR
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'src/Application/UseCase/**'
-      - 'docs/**'
-      - 'scripts/generate-usecase-diagrams.php'
 
 permissions:
   contents: write
